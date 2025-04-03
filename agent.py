@@ -103,12 +103,15 @@ async def get_moderation_recommendation(
     # If the content is flagged and auto-moderate is enabled, generate suggested edits
     suggested_edits = None
     if decision["action"] != "approve" and ctx.deps.auto_moderate:
-        suggested_edits = await suggest_content_edits(ctx, analysis_result["text"], decision["reasons"])
+        suggested_edits = await suggest_content_edits(
+            ctx, 
+            analysis_result["text"], 
+            decision["reasons"]
+        )
 
-    return {
+    result = {
         "original_text": analysis_result["text"],
         "decision": decision["action"],  # "approve", "flag_for_review", or "reject"
         "confidence": decision["confidence"],
         "reasons": decision["reasons"],
         "policy_violations": decision["policy_violations"],
-        "suggested_edits": suggeste

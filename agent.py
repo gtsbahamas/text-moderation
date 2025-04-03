@@ -111,6 +111,3 @@ async def get_moderation_recommendation(
             "toxicity_scores": analysis_result["toxicity"],
             "categories": analysis_result["categories"],
         }
-
-async def main():
-    """Run the text moderation agent with sample text

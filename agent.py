@@ -2,10 +2,11 @@ from __future__ import annotations as _annotations
 
 import asyncio
 import os
+import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-import logfire
 from httpx import AsyncClient
 from pydantic_ai import Agent, RunContext
 
@@ -19,8 +20,12 @@ from agent_tools import (
 
 from agent_prompts import SYSTEM_PROMPT
 
-# Configure logging
-logfire.configure(send_to_logfire='if-token-present')
+# Configure basic logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("text_moderation_agent")
 
 @dataclass
 class Deps:
@@ -57,26 +62,25 @@ async def analyze_text(
     Returns:
         A dictionary containing the analysis results.
     """
-    with logfire.span('analyzing_text', 
-                     attributes={'text_length': len(text), 'has_context': context is not None}):
+    logger.info(f"Analyzing text: length={len(text)}, has_context={context is not None}")
 
-        # Get toxicity scores
-        toxicity_result = await check_text_toxicity(ctx, text)
+    # Get toxicity scores
+    toxicity_result = await check_text_toxicity(ctx, text)
 
-        # Detect sensitive information
-        sensitive_info = await detect_sensitive_information(ctx, text)
+    # Detect sensitive information
+    sensitive_info = await detect_sensitive_information(ctx, text)
 
-        # Categorize content 
-        categories = await categorize_content(ctx, text, context)
+    # Categorize content 
+    categories = await categorize_content(ctx, text, context)
 
-        return {
-            "text": text,
-            "toxicity": toxicity_result,
-            "sensitive_information": sensitive_info,
-            "categories": categories,
-            "context": context,
-            "user_id": user_id,
-        }
+    return {
+        "text": text,
+        "toxicity": toxicity_result,
+        "sensitive_information": sensitive_info,
+        "categories": categories,
+        "context": context,
+        "user_id": user_id,
+    }
 
 @text_moderation_agent.tool
 async def get_moderation_recommendation(
@@ -92,22 +96,19 @@ async def get_moderation_recommendation(
     Returns:
         A dictionary with the moderation decision and explanation.
     """
-    with logfire.span('getting_moderation_recommendation'):
+    logger.info("Getting moderation recommendation")
 
-        decision = await get_moderation_decision(ctx, analysis_result)
+    decision = await get_moderation_decision(ctx, analysis_result)
 
-        # If the content is flagged and auto-moderate is enabled, generate suggested edits
-        suggested_edits = None
-        if decision["action"] != "approve" and ctx.deps.auto_moderate:
-            suggested_edits = await suggest_content_edits(ctx, analysis_result["text"], decision["reasons"])
+    # If the content is flagged and auto-moderate is enabled, generate suggested edits
+    suggested_edits = None
+    if decision["action"] != "approve" and ctx.deps.auto_moderate:
+        suggested_edits = await suggest_content_edits(ctx, analysis_result["text"], decision["reasons"])
 
-        return {
-            "original_text": analysis_result["text"],
-            "decision": decision["action"],  # "approve", "flag_for_review", or "reject"
-            "confidence": decision["confidence"],
-            "reasons": decision["reasons"],
-            "policy_violations": decision["policy_violations"],
-            "suggested_edits": suggested_edits,
-            "toxicity_scores": analysis_result["toxicity"],
-            "categories": analysis_result["categories"],
-        }
+    return {
+        "original_text": analysis_result["text"],
+        "decision": decision["action"],  # "approve", "flag_for_review", or "reject"
+        "confidence": decision["confidence"],
+        "reasons": decision["reasons"],
+        "policy_violations": decision["policy_violations"],
+        "suggested_edits": suggeste

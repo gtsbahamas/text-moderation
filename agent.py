@@ -113,4 +113,4 @@ async def get_moderation_recommendation(
         }
 
 async def main():
-    """Run the text moderation agent
+    """Run the text moderation agent with sample text
